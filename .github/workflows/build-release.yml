@@ -27,7 +27,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libsasl2-dev libcurl-dev
+        sudo apt-get update && sudo apt-get install libsasl2-dev libcurl4-openssl-dev
 
     - uses: actions/checkout@v2
 
