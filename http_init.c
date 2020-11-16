@@ -13,13 +13,9 @@
 
 #include "plugin_common.h"
 
-#ifdef macintosh
-#include <sasl_xoauth2_plugin_decl.h>
-#endif
-
 #ifdef WIN32
-BOOL APIENTRY DllMain( HANDLE hModule, 
-                       DWORD  ul_reason_for_call, 
+BOOL APIENTRY DllMain( HANDLE hModule,
+                       DWORD  ul_reason_for_call,
                        LPVOID lpReserved
 					 )
 {
@@ -35,6 +31,5 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 }
 #endif
 
-SASL_CLIENT_PLUG_INIT( xoauth2 )
-//SASL_SERVER_PLUG_INIT( xoauth2 )
+SASL_AUXPROP_PLUG_INIT( httpdb )
 
