@@ -52,8 +52,6 @@ jobs:
 
     - name: Build
       run: |
-        ls
-        cat Makefile
         make
 
     - name: package
