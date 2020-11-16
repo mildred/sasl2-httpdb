@@ -57,6 +57,7 @@ jobs:
     - name: package
       run: |
         mkdir dist
+        cp libsaslhttpdb.so dist/libsaslhttpdb.so
         tar Jcf dist/libsaslhttpdb.tar.xz libsaslhttpdb.so
 
     # https://github.com/marketplace/actions/create-release
