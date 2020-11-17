@@ -434,6 +434,7 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
     *out_version = SASL_AUXPROP_PLUG_VERSION;
 
     httpdb_settings_t *settings = (httpdb_settings_t *) utils->malloc(sizeof(httpdb_settings_t));
+    bzero(&settings, sizeof(httpdb_settings_t));
 
     if (!settings) {
         utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize\n");
