@@ -423,7 +423,7 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
 {
     if(!out_version || !plug) return SASL_BADPARAM;
 
-    utils->log(utils->conn, SASL_LOG_ERR, "httpdb: starting up...\n");
+    utils->log(utils->conn, SASL_LOG_DEBUG, "httpdb: starting up...\n");
 
     /* Check if libsasl API is older than ours. If it is, fail */
     if(max_version < SASL_AUXPROP_PLUG_VERSION) {
