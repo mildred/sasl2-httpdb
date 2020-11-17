@@ -442,6 +442,8 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
         return SASL_NOMEM;
     }
 
+    httpdb_get_settings(utils, settings);
+
     if (!settings->curl) {
         utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize curl\n");
         httpdb_auxprop_free(settings, utils);
@@ -454,9 +456,6 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
         httpdb_auxprop_free(settings, utils);
         return SASL_BADPARAM;
     }
-
-    memset(settings, 0, sizeof(httpdb_settings_t));
-    httpdb_get_settings(utils, settings);
 
     httpdb_auxprop_plugin.glob_context = settings;
     *plug = &httpdb_auxprop_plugin;
