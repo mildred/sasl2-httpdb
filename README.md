@@ -1,4 +1,5 @@
-# sasl2-http
+sasl2-httpdb
+============
 
 Cyrus-SASL/libsasl2 auxprop plugin using HTTP to query information
 
@@ -53,3 +54,41 @@ SCRIPT
 #}
 
 ```
+
+build
+-----
+
+Requires libcurl and libsasl2. Run:
+
+    make
+
+debug
+-----
+
+imapd.conf
+
+```yaml
+debug: 1
+
+# SASL_LOG_NONE  0 don't log anything
+# SASL_LOG_ERR   1 log unusual errors (default)
+# SASL_LOG_FAIL  2 log all authentication failures
+# SASL_LOG_WARN  3 log non-fatal warnings
+# SASL_LOG_NOTE  4 more verbose than LOG_WARN
+# SASL_LOG_DEBUG 5 more verbose than LOG_NOTE
+# SASL_LOG_TRACE 6 traces of internal protocols
+# SASL_LOG_PASS  7 traces of internal protocols, including passwords
+sasl_log_level: 7
+
+allowplaintext: yes
+sasl_pwcheck_method: auxprop
+sasl_auto_transition: yes
+sasl_auxprop_plugin: httpdb
+
+sasl_httpdb_url: http://localhost/
+
+```
+
+Run:
+
+    cyrus imtest -u jdoe@example.com -w dogood
