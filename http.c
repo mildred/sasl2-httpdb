@@ -399,7 +399,7 @@ static void httpdb_get_settings(const sasl_utils_t *utils, void *glob_context)
 
     settings->curl = curl_easy_init();
 
-    int r = utils->getopt(utils->getopt_context, "HTTP", "url", &settings->url, NULL);
+    int r = utils->getopt(utils->getopt_context, "httpdb", "url", &settings->url, NULL);
     if (r || !settings->url ) {
         settings->url = NULL;
     }
@@ -436,12 +436,13 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
 
     if (!settings->curl || !settings->url) {
         httpdb_auxprop_free(settings, utils);
-        utils->free(settings);
 
         if (!settings->curl) {
+            utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize curl\n");
             MEMERROR(utils);
             return SASL_NOMEM;
         } else if (!settings->url) {
+            utils->log(utils->conn, SASL_LOG_ERR, "httpdb: missing httpdb_url setting\n");
             return SASL_BADPARAM;
         }
     }
