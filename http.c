@@ -423,28 +423,35 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
 {
     if(!out_version || !plug) return SASL_BADPARAM;
 
+    utils->log(utils->conn, SASL_LOG_ERR, "httpdb: starting up...\n");
+
     /* Check if libsasl API is older than ours. If it is, fail */
-    if(max_version < SASL_AUXPROP_PLUG_VERSION) return SASL_BADVERS;
+    if(max_version < SASL_AUXPROP_PLUG_VERSION) {
+        utils->log(utils->conn, SASL_LOG_ERR, "httpdb: version mismatch %d < %d\n",
+            max_version, SASL_AUXPROP_PLUG_VERSION);
+        return SASL_BADVERS;
+    }
     *out_version = SASL_AUXPROP_PLUG_VERSION;
 
     httpdb_settings_t *settings = (httpdb_settings_t *) utils->malloc(sizeof(httpdb_settings_t));
 
     if (!settings) {
+        utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize\n");
         MEMERROR(utils);
         return SASL_NOMEM;
     }
 
-    if (!settings->curl || !settings->url) {
+    if (!settings->curl) {
+        utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize curl\n");
         httpdb_auxprop_free(settings, utils);
+        MEMERROR(utils);
+        return SASL_NOMEM;
+    }
 
-        if (!settings->curl) {
-            utils->log(utils->conn, SASL_LOG_ERR, "httpdb: failed to initialize curl\n");
-            MEMERROR(utils);
-            return SASL_NOMEM;
-        } else if (!settings->url) {
-            utils->log(utils->conn, SASL_LOG_ERR, "httpdb: missing httpdb_url setting\n");
-            return SASL_BADPARAM;
-        }
+    if (!settings->url) {
+        utils->log(utils->conn, SASL_LOG_ERR, "httpdb: missing httpdb_url setting\n");
+        httpdb_auxprop_free(settings, utils);
+        return SASL_BADPARAM;
     }
 
     memset(settings, 0, sizeof(httpdb_settings_t));
@@ -452,6 +459,8 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
 
     httpdb_auxprop_plugin.glob_context = settings;
     *plug = &httpdb_auxprop_plugin;
+
+    utils->log(utils->conn, SASL_LOG_DEBUG, "httpdb: initialized\n");
 
     return SASL_OK;
 }
