@@ -31,5 +31,8 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 }
 #endif
 
+//SASL_CLIENT_PLUG_INIT( httpdb )
+//SASL_SEVER_PLUG_INIT( httpdb )
+//SASL_CANONUSER_PLUG_INIT( httpdb )
 SASL_AUXPROP_PLUG_INIT( httpdb )
 

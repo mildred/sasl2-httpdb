@@ -415,7 +415,7 @@ static sasl_auxprop_plug_t httpdb_auxprop_plugin = {
     httpdb_auxprop_store         /* auxprop_store */
 };
 
-int httpdb_client_plug_init(sasl_utils_t *utils,
+int httpdb_auxprop_plug_init(sasl_utils_t *utils,
                             int max_version,
                             int *out_version,
                             sasl_auxprop_plug_t **plug,
@@ -454,3 +454,31 @@ int httpdb_client_plug_init(sasl_utils_t *utils,
 
     return SASL_OK;
 }
+
+int httpdb_client_plug_init(sasl_utils_t *utils,
+                            int max_version,
+                            int *out_version,
+                            sasl_auxprop_plug_t **plug,
+                            const char *plugname __attribute__((unused)))
+{
+    return SASL_FAIL;
+}
+
+int httpdb_server_plug_init(sasl_utils_t *utils,
+                            int max_version,
+                            int *out_version,
+                            sasl_auxprop_plug_t **plug,
+                            const char *plugname __attribute__((unused)))
+{
+    return SASL_FAIL;
+}
+
+int httpdb_canonuser_plug_init(sasl_utils_t *utils,
+                               int max_version,
+                               int *out_version,
+                               sasl_auxprop_plug_t **plug,
+                               const char *plugname __attribute__((unused)))
+{
+    return SASL_FAIL;
+}
+
