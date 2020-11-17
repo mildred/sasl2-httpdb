@@ -399,7 +399,7 @@ static void httpdb_get_settings(const sasl_utils_t *utils, void *glob_context)
 
     settings->curl = curl_easy_init();
 
-    int r = utils->getopt(utils->getopt_context, "httpdb", "url", &settings->url, NULL);
+    int r = utils->getopt(utils->getopt_context, "httpdb", "httpdb_url", &settings->url, NULL);
     if (r || !settings->url ) {
         settings->url = NULL;
     }
