@@ -8,6 +8,34 @@ imapd.conf settings
 
 - `sasl_httpdb_url`: backend URL
 
+Protocol
+--------
+
+On the URL configured, the plugin will perform a POST query with
+`application/x-www-form-urlencoded` payload. The payload contains different
+variables depending on the type of query performed.
+
+- lookup queries:
+
+    - `req=lookup`
+    - `userid=` the user ID
+    - `realm=` the realm
+    - `param=` the param requested, repeated for each param requested
+
+    The response should contain a `application/x-www-form-urlencoded` payload
+    with a 2xx status code. The response should contain each param requested in
+    the form `param.<paramname>=<value>`
+
+- store queries:
+
+    - `req=store`
+    - `userid=` the user ID
+    - `realm=` the realm
+    - `param.<paramname>=` the param with its value to store
+
+    The response must have a 2xx code to succeed. The body can be empty.
+
+
 installation
 ------------
 
