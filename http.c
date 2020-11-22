@@ -209,8 +209,6 @@ static int httpdb_auxprop_lookup(void *glob_context,
     }
 
 
-    ret = SASL_OK;
-
     char *key = NULL;
     char *value = NULL;
     for(int i = 0; i < response.size; ++i) {
@@ -235,6 +233,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
                     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                         "httpdb plugin lookup got param %s=%s: %s\n",
                                         &key2[6], value2);
+                    ret = SASL_OK;
                 } else {
                     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                         "httpdb plugin lookup got discarded %s=%s: %s\n",
