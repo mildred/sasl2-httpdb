@@ -208,6 +208,9 @@ static int httpdb_auxprop_lookup(void *glob_context,
         goto done;
     }
 
+    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                        "httpdb plugin lookup response: %s\n",
+                        response.response);
 
     char *key = NULL;
     char *value = NULL;
@@ -253,6 +256,11 @@ static int httpdb_auxprop_lookup(void *glob_context,
             default:
                 break;
         }
+    }
+
+    if (ret == SASL_NOUSER) {
+      sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                          "httpdb plugin lookup did not match\n");
     }
 
     if (flags & SASL_AUXPROP_AUTHZID) {
