@@ -42,6 +42,29 @@ static size_t writedata(void *data, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
+static _Bool add_param(CURL *curl, char **params, int *params_len, const char *name, const char *value) {
+  _Bool result = 1;
+  char *esc_name = curl_easy_escape(curl, name, 0);
+  char *esc_value = curl_easy_escape(curl, value, 0);
+  int new_params_len = *params_len + 1 + strlen(esc_name) + 1 + strlen(esc_value);
+  char *new_params = malloc(new_params_len * sizeof(char));
+  if(new_params) {
+    if(*params_len == 0) {
+      snprintf(new_params, new_params_len, "%s=%s", esc_name, esc_value);
+    } else {
+      snprintf(new_params, new_params_len, "%s&%s=%s", *params, esc_name, esc_value);
+    }
+    if(*params) free(*params);
+    *params = new_params;
+    *params_len = new_params_len;
+  } else {
+    result = 0;
+  }
+  curl_free(esc_name);
+  curl_free(esc_value);
+  return result;
+}
+
 static int httpdb_auxprop_lookup(void *glob_context,
                                  sasl_server_params_t *sparams,
                                  unsigned flags,
@@ -106,27 +129,18 @@ static int httpdb_auxprop_lookup(void *glob_context,
         goto done;
     }
 
-    curl_mime *mime = curl_mime_init(settings->curl);
-    if(!mime) {
+    char *body = 0;
+    int body_len = 0;
+
+    if(!add_param(settings->curl, &body, &body_len, "req", "lookup") ||
+       !add_param(settings->curl, &body, &body_len, "userid", userid) ||
+       !add_param(settings->curl, &body, &body_len, "realm", realm)) {
         ret = SASL_NOMEM;
         goto done;
     }
-
-    curl_mimepart *part = curl_mime_addpart(mime);
-    curl_mime_data(part, "lookup", CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "req");
-
-    curl_mime_data(part, userid, CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "userid");
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin lookup userid=%s\n",
-                        userid);
-
-    curl_mime_data(part, realm, CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "realm");
-    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin lookup realm=%s\n",
-                        realm);
+                        "httpdb plugin lookup userid=%s, realm=%s\n",
+                        userid, realm);
 
     verify_against_hashed_password = flags & SASL_AUXPROP_VERIFY_AGAINST_HASH;
 
@@ -162,8 +176,10 @@ static int httpdb_auxprop_lookup(void *glob_context,
                             "httpdb plugin lookup param=%s\n",
                             realname);
 
-        curl_mime_data(part, realname, CURL_ZERO_TERMINATED);
-        curl_mime_name(part, "param");
+        if(!add_param(settings->curl, &body, &body_len, "param", realname)) {
+            ret = SASL_NOMEM;
+            goto done;
+        }
     }
 
     writedata_t response;
@@ -171,7 +187,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
 
     curl_easy_setopt(settings->curl, CURLOPT_WRITEFUNCTION, writedata);
     curl_easy_setopt(settings->curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(settings->curl, CURLOPT_MIMEPOST, mime);
+    curl_easy_setopt(settings->curl, CURLOPT_POSTFIELDS, body);
     curl_easy_setopt(settings->curl, CURLOPT_URL, settings->url);
     ret = curl_easy_perform(settings->curl);
     if(ret != CURLE_OK) {
@@ -249,7 +265,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
     if (userid) sparams->utils->free(userid);
     if (realm) sparams->utils->free(realm);
     if (user_buf) sparams->utils->free(user_buf);
-    if (mime) curl_mime_free(mime);
+    if (body) free(body);
     if (response.response) free(response.response);
 
     return (ret);
@@ -308,27 +324,19 @@ static int httpdb_auxprop_store(void *glob_context,
         goto done;
     }
 
-    curl_mime *mime = curl_mime_init(settings->curl);
-    if(!mime) {
+    char *body = 0;
+    int body_len = 0;
+
+    if(!add_param(settings->curl, &body, &body_len, "req", "store") ||
+       !add_param(settings->curl, &body, &body_len, "userid", userid) ||
+       !add_param(settings->curl, &body, &body_len, "realm", realm)) {
         ret = SASL_NOMEM;
         goto done;
     }
 
-    curl_mimepart *part = curl_mime_addpart(mime);
-    curl_mime_data(part, "store", CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "req");
-
-    curl_mime_data(part, userid, CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "userid");
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin store userid=%s\n",
-                        userid);
-
-    curl_mime_data(part, realm, CURL_ZERO_TERMINATED);
-    curl_mime_name(part, "realm");
-    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin store realm=%s\n",
-                        realm);
+                        "httpdb plugin store userid=%s realm=%s\n",
+                        userid, realm);
 
     for (cur = to_store; ret == SASL_OK && cur->name; cur++) {
 
@@ -342,14 +350,16 @@ static int httpdb_auxprop_store(void *glob_context,
 
         const char *value = cur->values && cur->values[0] ? cur->values[0] : "";
 
-        curl_mime_data(part, value, CURL_ZERO_TERMINATED);
-        curl_mime_name(part, key2);
         sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                             "httpdb plugin store %s=%s\n",
                             key2, value);
+        if(!add_param(settings->curl, &body, &body_len, key2, value)) {
+            ret = SASL_NOMEM;
+            goto done;
+        }
     }
 
-    curl_easy_setopt(settings->curl, CURLOPT_MIMEPOST, mime);
+    curl_easy_setopt(settings->curl, CURLOPT_POSTFIELDS, body);
     curl_easy_setopt(settings->curl, CURLOPT_URL, settings->url);
     ret = curl_easy_perform(settings->curl);
     if(ret != CURLE_OK) {
@@ -374,7 +384,7 @@ static int httpdb_auxprop_store(void *glob_context,
     if (userid) sparams->utils->free(userid);
     if (realm) sparams->utils->free(realm);
     if (user_buf) sparams->utils->free(user_buf);
-    if (mime) curl_mime_free(mime);
+    if (body) free(body);
 
     return ret;
 }
