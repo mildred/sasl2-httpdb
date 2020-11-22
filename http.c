@@ -211,22 +211,26 @@ static int httpdb_auxprop_lookup(void *glob_context,
 
     char *key = NULL;
     char *value = NULL;
-    for(int i = 0; i < response.size; ++i) {
-        char c = response.response[i];
-        if (!key) key = &response.response[i];
-        else if (!value) value = &response.response[i];
+    for(int i = 0; i <= response.size; ++i) {
+        char c = 0;
+        if(i < response.size) {
+          c = response.response[i];
+          if (!key) key = &response.response[i];
+          else if (!value) value = &response.response[i];
+        }
 
         switch(c) {
             case '=':
                 response.response[i] = 0;
                 value = NULL;
                 break;
+            case 0:
             case '&':
-                response.response[i] = 0;
+                if(i < response.size) response.response[i] = 0;
 
                 int keylen, valuelen;
-                char *key2 = curl_easy_unescape(settings->curl, key, 0, &keylen);
-                char *value2 = curl_easy_unescape(settings->curl, value, 0, &valuelen);
+                char *key2 = curl_easy_unescape(settings->curl, key || "", 0, &keylen);
+                char *value2 = curl_easy_unescape(settings->curl, value || "", 0, &valuelen);
 
                 if(strstr(key2, "param.") == key2) {
                     sparams->utils->prop_set(sparams->propctx, &key2[6], value2, valuelen);
