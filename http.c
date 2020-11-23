@@ -25,6 +25,124 @@ typedef struct writedata {
     size_t  size;
 } writedata_t;
 
+typedef struct params {
+    char         *key;
+    char         *value;
+    int           key_len;
+    int           value_len;
+    struct params *next;
+} params_t;
+
+static void free_params_t(params_t **params) {
+  if(*params){
+    if((*params)->next){
+      free_params_t(&(*params)->next);
+    }
+    if((*params)->key) {
+      free((*params)->key);
+      (*params)->key = 0;
+    }
+    if((*params)->value) {
+      free((*params)->value);
+      (*params)->value = 0;
+    }
+    free((*params));
+    *params = 0;
+  }
+}
+
+static params_t *new_params_t(int key_len, int value_len, params_t *next) {
+  params_t *result = malloc(sizeof(params_t));
+  if (!result) return result;
+
+  result->key = malloc(key_len);
+  result->value = malloc(value_len);
+  if (!result->key || !result->value) {
+    free_params_t(&result);
+    return result;
+  }
+
+  result->key_len = key_len;
+  result->value_len = value_len;
+  result->next = next;
+  bzero(result->key, key_len+1);
+  bzero(result->value, value_len+1);
+  return result;
+}
+
+static int strfindc(const char *haystack, size_t length, char needle, int from) {
+    size_t needle_length = 1;
+    size_t i;
+    for (i = from; i + needle_length - 1 < length; i++) {
+        if (haystack[i] == needle) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+
+static _Bool parse_params_proc(CURL *curl, params_t **response, const char *data, int len){
+  *response = 0;
+  if(len <= 0) {
+    return 1;
+  }
+
+  int eql = strfindc(data, len, '=', 0);
+  int and = strfindc(data, len, '&', (eql<0) ? 0 : eql);
+
+  if(and < 0) and = len;
+
+  if(and == 0){
+    return parse_params_proc(curl, response, &data[1], len-1);
+  } else if(eql < 0){
+    int keylen;
+    char *key = curl_easy_unescape(curl, data, and, &keylen);
+    if(!key) {
+      return 0;
+    }
+    *response = new_params_t(keylen, 0, 0);
+    if(!*response){
+      curl_free(key);
+      return 0;
+    }
+    memcpy((*response)->key, key, keylen);
+    curl_free(key);
+    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-and-2);
+  } else {
+    int keylen, valuelen;
+    char *key = curl_easy_unescape(curl, data, eql, &keylen);
+    if(!key) {
+      return 0;
+    }
+    char *value = curl_easy_unescape(curl, &data[eql+1], and-eql-1, &valuelen);
+    if(!key) {
+      curl_free(key);
+      return 0;
+    }
+    *response = new_params_t(keylen, valuelen, 0);
+    if(!*response){
+      curl_free(key);
+      curl_free(value);
+      return 0;
+    }
+    memcpy((*response)->key, key, keylen);
+    memcpy((*response)->value, value, valuelen);
+    curl_free(key);
+    curl_free(value);
+    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-and-2);
+  }
+}
+
+static params_t *parse_params(CURL *curl, const char *response, int len){
+  params_t *result;
+  if(!parse_params_proc(curl, &result, response, len)) {
+    free_params_t(&result);
+    return (params_t *)(-1);
+  }
+  return result;
+}
+
 static size_t writedata(void *data, size_t size, size_t nmemb, void *userp)
 {
     size_t realsize = size * nmemb;
@@ -85,6 +203,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
     int verify_against_hashed_password;
     void *conn = NULL;
     int ret;
+    params_t *params;
 
     if (!glob_context || !sparams || !user) return SASL_BADPARAM;
 
@@ -212,49 +331,23 @@ static int httpdb_auxprop_lookup(void *glob_context,
                         "httpdb plugin lookup response: %s\n",
                         response.response);
 
-    char *key = NULL;
-    char *value = NULL;
-    for(int i = 0; i <= response.size; ++i) {
-        char c = 0;
-        if(i < response.size) {
-          c = response.response[i];
-          if (!key) key = &response.response[i];
-          else if (!value) value = &response.response[i];
-        }
+    params = parse_params(settings->curl, response.response, response.size);
+    if(params < 0) {
+        ret = SASL_NOMEM;
+        goto done;
+    }
 
-        switch(c) {
-            case '=':
-                response.response[i] = 0;
-                value = NULL;
-                break;
-            case 0:
-            case '&':
-                if(i < response.size) response.response[i] = 0;
-
-                int keylen, valuelen;
-                char *key2 = curl_easy_unescape(settings->curl, key || "", 0, &keylen);
-                char *value2 = curl_easy_unescape(settings->curl, value || "", 0, &valuelen);
-
-                if(strstr(key2, "param.") == key2) {
-                    sparams->utils->prop_set(sparams->propctx, &key2[6], value2, valuelen);
-                    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                                        "httpdb plugin lookup got param %s=%s: %s\n",
-                                        &key2[6], value2);
-                    ret = SASL_OK;
-                } else {
-                    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                                        "httpdb plugin lookup got discarded %s=%s: %s\n",
-                                        key2, value2);
-                }
-
-                curl_free(key2);
-                curl_free(value2);
-
-                key = NULL;
-                value = NULL;
-                break;
-            default:
-                break;
+    for(params_t *p = params; p; p = p->next){
+        if(strstr(p->key, "param.") == p->key) {
+            sparams->utils->prop_set(sparams->propctx, &(p->key[6]), p->value, p->value_len);
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                                "httpdb plugin lookup got param %s=%s: %s\n",
+                                &p->key[6], p->value);
+            ret = SASL_OK;
+        } else {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                                "httpdb plugin lookup got discarded %s=%s: %s\n",
+                                p->key, p->value);
         }
     }
 
@@ -278,6 +371,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
     if (user_buf) sparams->utils->free(user_buf);
     if (body) free(body);
     if (response.response) free(response.response);
+    free_params_t(&params);
 
     return (ret);
 }
