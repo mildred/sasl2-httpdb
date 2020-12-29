@@ -327,7 +327,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
         goto done;
     }
 
-    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+    sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
                         "httpdb plugin lookup response: %s\n",
                         response.response);
 
@@ -340,13 +340,15 @@ static int httpdb_auxprop_lookup(void *glob_context,
     for(params_t *p = params; p; p = p->next){
         if(strstr(p->key, "param.") == p->key) {
             sparams->utils->prop_set(sparams->propctx, &(p->key[6]), p->value, p->value_len);
-            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                                "httpdb plugin lookup got param %s=%s: %s\n",
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                                "httpdb plugin lookup got param %s=%s\n",
                                 &p->key[6], p->value);
+            ret = SASL_OK;
+        } else if(!strcmp(p->key, "res") && !strcmp(p->key, "ok")) {
             ret = SASL_OK;
         } else {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                                "httpdb plugin lookup got discarded %s=%s: %s\n",
+                                "httpdb plugin lookup got discarded %s=%s\n",
                                 p->key, p->value);
         }
     }
@@ -455,7 +457,7 @@ static int httpdb_auxprop_store(void *glob_context,
 
         const char *value = cur->values && cur->values[0] ? cur->values[0] : "";
 
-        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
                             "httpdb plugin store %s=%s\n",
                             key2, value);
         if(!add_param(settings->curl, &body, &body_len, key2, value)) {

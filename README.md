@@ -23,8 +23,11 @@ variables depending on the type of query performed.
     - `param=` the param requested, repeated for each param requested
 
     The response should contain a `application/x-www-form-urlencoded` payload
-    with a 2xx status code. The response should contain each param requested in
-    the form `param.<paramname>=<value>`
+    with a 2xx status code. The response should contain:
+
+    - 'res=' which must be `ok` when the user was found (even if no param was
+      requested)
+    - `param.<paramname>=` containing the value of each param requested
 
 - store queries:
 
