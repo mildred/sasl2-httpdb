@@ -321,7 +321,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
     curl_easy_getinfo(settings->curl, CURLINFO_RESPONSE_CODE, &code);
     if (code < 200 || code >= 300) {
         sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
-                            "httpdb plugin HTTP error code %d on %s\n",
+                            "httpdb plugin HTTP error code %ld on %s\n",
                             code, settings->url);
         ret = SASL_FAIL;
         goto done;
@@ -347,7 +347,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
         } else if(!strcmp(p->key, "res") && !strcmp(p->value, "ok")) {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
                                 "httpdb plugin lookup got %s=%s (found user)\n",
-                                &p->key, p->value);
+                                p->key, p->value);
             ret = SASL_OK;
         } else {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
@@ -489,7 +489,7 @@ static int httpdb_auxprop_store(void *glob_context,
     curl_easy_getinfo(settings->curl, CURLINFO_RESPONSE_CODE, &code);
     if (code < 200 || code >= 300) {
         sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
-                            "httpdb plugin HTTP error code %d on %s\n",
+                            "httpdb plugin HTTP error code %ld on %s\n",
                             code, settings->url);
         ret = SASL_FAIL;
         goto done;
