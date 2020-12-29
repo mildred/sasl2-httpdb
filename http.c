@@ -341,10 +341,13 @@ static int httpdb_auxprop_lookup(void *glob_context,
         if(strstr(p->key, "param.") == p->key) {
             sparams->utils->prop_set(sparams->propctx, &(p->key[6]), p->value, p->value_len);
             sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
-                                "httpdb plugin lookup got param %s=%s\n",
+                                "httpdb plugin lookup got param %s=%s (found user)\n",
                                 &p->key[6], p->value);
             ret = SASL_OK;
-        } else if(!strcmp(p->key, "res") && !strcmp(p->key, "ok")) {
+        } else if(!strcmp(p->key, "res") && !strcmp(p->value, "ok")) {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                                "httpdb plugin lookup got %s=%s (found user)\n",
+                                &p->key, p->value);
             ret = SASL_OK;
         } else {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
@@ -353,7 +356,10 @@ static int httpdb_auxprop_lookup(void *glob_context,
         }
     }
 
-    if (ret == SASL_NOUSER) {
+    if (ret == SASL_OK) {
+      sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                          "httpdb plugin lookup OK\n");
+    } else if (ret == SASL_NOUSER) {
       sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                           "httpdb plugin lookup did not match\n");
     }
@@ -368,6 +374,8 @@ static int httpdb_auxprop_lookup(void *glob_context,
 
 
   done:
+    sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                        "httpdb plugin lookup ret=%d\n", ret);
     if (userid) sparams->utils->free(userid);
     if (realm) sparams->utils->free(realm);
     if (user_buf) sparams->utils->free(user_buf);
