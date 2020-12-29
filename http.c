@@ -290,19 +290,19 @@ static int httpdb_auxprop_lookup(void *glob_context,
         /* Only look up properties that apply to this lookup! */
         if (cur->name[0] == '*'
             && (flags & SASL_AUXPROP_AUTHZID)) {
-            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                 "httpdb plugin lookup skip authentication param=%s\n",
                                 realname);
             continue;
         }
         if (!(flags & SASL_AUXPROP_AUTHZID)) {
             if(cur->name[0] != '*') {
-                sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                     "httpdb plugin lookup skip authorization param=%s\n",
                                     realname);
                 continue;
             } else {
-                sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                     "httpdb plugin lookup transform authentication param=%s\n",
                                     realname);
                 realname = (char*)cur->name + 1;
@@ -316,7 +316,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
         if (cur->values && !(flags & SASL_AUXPROP_OVERRIDE) &&
             (verify_against_hashed_password == 0 ||
              strcasecmp(realname, SASL_AUX_PASSWORD_PROP) != 0)) {
-            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                 "httpdb plugin lookup skip param to prevent override param=%s\n",
                                 realname);
             continue;
@@ -412,14 +412,16 @@ static int httpdb_auxprop_lookup(void *glob_context,
         /* This is a lie, but the caller can't handle
            when we return SASL_NOUSER for authorization identity lookup. */
         if (ret == SASL_NOUSER) {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                "httpdb plugin lookup NOUSER->OK on authorization\n");
             ret = SASL_OK;
         }
     }
 
 
   done:
-    sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                        "httpdb plugin lookup ret=%d\n", ret);
+    //sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+    //                    "httpdb plugin lookup ret=%d\n", ret);
     if (userid) sparams->utils->free(userid);
     if (realm) sparams->utils->free(realm);
     if (user_buf) sparams->utils->free(user_buf);
