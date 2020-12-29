@@ -108,7 +108,7 @@ static _Bool parse_params_proc(CURL *curl, params_t **response, const char *data
     }
     memcpy((*response)->key, key, keylen);
     curl_free(key);
-    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-(and+2));
+    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-(and+1));
   } else {
     int keylen, valuelen;
     char *key = curl_easy_unescape(curl, data, eql, &keylen);
@@ -130,7 +130,7 @@ static _Bool parse_params_proc(CURL *curl, params_t **response, const char *data
     memcpy((*response)->value, value, valuelen);
     curl_free(key);
     curl_free(value);
-    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-(and+2));
+    return parse_params_proc(curl, &(*response)->next, &data[and+1], len-(and+1));
   }
 }
 
