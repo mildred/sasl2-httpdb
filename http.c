@@ -271,15 +271,28 @@ static int httpdb_auxprop_lookup(void *glob_context,
     for (cur = to_fetch; cur->name; cur++) {
         char *realname = (char *) cur->name;
 
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                            "httpdb plugin lookup param?=%s\n",
+                            realname);
+
         /* Only look up properties that apply to this lookup! */
         if (cur->name[0] == '*'
-            && (flags & SASL_AUXPROP_AUTHZID))
+            && (flags & SASL_AUXPROP_AUTHZID)) {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                "httpdb plugin lookup param skip name=*\n");
             continue;
+        }
         if (!(flags & SASL_AUXPROP_AUTHZID)) {
-            if(cur->name[0] != '*')
+            if(cur->name[0] != '*') {
+                sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                    "httpdb plugin lookup param skip name!=*\n");
                 continue;
-            else
+            } else {
                 realname = (char*)cur->name + 1;
+                sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                    "httpdb plugin lookup param?=%s\n",
+                                    realname);
+            }
         }
 
         /* If it's there already, we want to see if it needs to be
