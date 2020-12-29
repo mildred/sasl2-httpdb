@@ -352,6 +352,9 @@ static int httpdb_auxprop_lookup(void *glob_context,
             sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
                                 "httpdb plugin lookup got param value: %s\n",
                                 p->value);
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                                "httpdb plugin lookup got param value len: %d\n",
+                                p->value_len);
             ret = SASL_OK;
         } else if(!strcmp(p->key, "res") && !strcmp(p->value, "ok")) {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
