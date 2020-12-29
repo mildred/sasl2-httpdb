@@ -211,6 +211,22 @@ static int httpdb_auxprop_lookup(void *glob_context,
     settings = (httpdb_settings_t *)glob_context;
     if (!settings) return SASL_BADPARAM;
 
+    if (flags & SASL_AUXPROP_AUTHZID) {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup authorization (no prefix)\n", user);
+    } else {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup authentication (param prefixed with *)\n", user);
+    }
+
+    if (flags & SASL_AUXPROP_OVERRIDE) {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup override (auxprop values with zero len)\n", user);
+    } else {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup no override (ignore auxprop with non zero len)\n", user);
+    }
+
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                         "httpdb plugin lookup Parse the username %s\n", user);
 
@@ -303,7 +319,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
             (verify_against_hashed_password == 0 ||
              strcasecmp(realname, SASL_AUX_PASSWORD_PROP) != 0)) {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                                "httpdb plugin lookup param skip\n");
+                                "httpdb plugin lookup param skip (no override)\n");
             continue;
         } else if (cur->values) {
             sparams->utils->prop_erase(sparams->propctx, cur->name);
