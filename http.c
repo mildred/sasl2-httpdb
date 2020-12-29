@@ -302,6 +302,8 @@ static int httpdb_auxprop_lookup(void *glob_context,
         if (cur->values && !(flags & SASL_AUXPROP_OVERRIDE) &&
             (verify_against_hashed_password == 0 ||
              strcasecmp(realname, SASL_AUX_PASSWORD_PROP) != 0)) {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                "httpdb plugin lookup param skip\n");
             continue;
         } else if (cur->values) {
             sparams->utils->prop_erase(sparams->propctx, cur->name);
