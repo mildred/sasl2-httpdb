@@ -212,7 +212,7 @@ static int httpdb_auxprop_lookup(void *glob_context,
     if (!settings) return SASL_BADPARAM;
 
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin Parse the username %s\n", user);
+                        "httpdb plugin lookup Parse the username %s\n", user);
 
     user_buf = sparams->utils->malloc(ulen + 1);
     if (!user_buf) {
@@ -258,8 +258,11 @@ static int httpdb_auxprop_lookup(void *glob_context,
         goto done;
     }
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin lookup userid=%s, realm=%s\n",
-                        userid, realm);
+                        "httpdb plugin lookup userid=%s\n",
+                        userid);
+    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                        "httpdb plugin lookup realm=%s\n",
+                        realm);
 
     verify_against_hashed_password = flags & SASL_AUXPROP_VERIFY_AGAINST_HASH;
 
@@ -313,6 +316,9 @@ static int httpdb_auxprop_lookup(void *glob_context,
         sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
                             "httpdb plugin couldn't connect to %s: %s\n",
                             settings->url, curl_easy_strerror(ret));
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
+                            "httpdb plugin couldn't connect: %s\n",
+                            curl_easy_strerror(ret));
         ret = SASL_FAIL;
         goto done;
     }
@@ -340,14 +346,16 @@ static int httpdb_auxprop_lookup(void *glob_context,
     for(params_t *p = params; p; p = p->next){
         if(strstr(p->key, "param.") == p->key) {
             sparams->utils->prop_set(sparams->propctx, &(p->key[6]), p->value, p->value_len);
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                                "httpdb plugin lookup got param %s (found user)\n",
+                                &p->key[6]);
             sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
-                                "httpdb plugin lookup got param %s=%s (found user)\n",
-                                &p->key[6], p->value);
+                                "httpdb plugin lookup got param value: %s\n",
+                                p->value);
             ret = SASL_OK;
         } else if(!strcmp(p->key, "res") && !strcmp(p->value, "ok")) {
-            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
-                                "httpdb plugin lookup got %s=%s (found user)\n",
-                                p->key, p->value);
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                                "httpdb plugin lookup got res=ok (found user)\n");
             ret = SASL_OK;
         } else {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
@@ -410,7 +418,7 @@ static int httpdb_auxprop_store(void *glob_context,
     if (!glob_context || !sparams || !user) return SASL_BADPARAM;
 
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin Parse the username %s\n", user);
+                        "httpdb plugin store Parse the username %s\n", user);
 
     user_buf = sparams->utils->malloc(ulen + 1);
     if (!user_buf) {
@@ -450,8 +458,11 @@ static int httpdb_auxprop_store(void *glob_context,
     }
 
     sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
-                        "httpdb plugin store userid=%s realm=%s\n",
-                        userid, realm);
+                        "httpdb plugin store userid=%s\n",
+                        userid);
+    sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                        "httpdb plugin store realm=%s\n",
+                        realm);
 
     for (cur = to_store; ret == SASL_OK && cur->name; cur++) {
 
@@ -465,9 +476,12 @@ static int httpdb_auxprop_store(void *glob_context,
 
         const char *value = cur->values && cur->values[0] ? cur->values[0] : "";
 
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin store %s\n",
+                            key2);
         sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
-                            "httpdb plugin store %s=%s\n",
-                            key2, value);
+                            "httpdb plugin store value: %s\n",
+                            value);
         if(!add_param(settings->curl, &body, &body_len, key2, value)) {
             ret = SASL_NOMEM;
             goto done;
@@ -481,6 +495,9 @@ static int httpdb_auxprop_store(void *glob_context,
         sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
                             "httpdb plugin couldn't connect to %s: %s\n",
                             settings->url, curl_easy_strerror(ret));
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_ERR,
+                            "httpdb plugin couldn't connect error: %s\n",
+                            curl_easy_strerror(ret));
         ret = SASL_FAIL;
         goto done;
     }
@@ -553,6 +570,8 @@ int httpdb_auxprop_plug_init(sasl_utils_t *utils,
     /* Check if libsasl API is older than ours. If it is, fail */
     if(max_version < SASL_AUXPROP_PLUG_VERSION) {
         utils->log(utils->conn, SASL_LOG_ERR, "httpdb: version mismatch %d < %d\n",
+            max_version, SASL_AUXPROP_PLUG_VERSION);
+        utils->log(utils->conn, SASL_LOG_ERR, "httpdb: want cyrus version < %d\n",
             max_version, SASL_AUXPROP_PLUG_VERSION);
         return SASL_BADVERS;
     }
