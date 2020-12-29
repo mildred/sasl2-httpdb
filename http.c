@@ -280,6 +280,21 @@ static int httpdb_auxprop_lookup(void *glob_context,
                         "httpdb plugin lookup realm=%s\n",
                         realm);
 
+    if (flags & SASL_AUXPROP_AUTHZID) {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup for=authz\n");
+        if(!add_param(settings->curl, &body, &body_len, "for", "authz")) {
+            ret = SASL_NOMEM;
+            goto done;
+        }
+    } else {
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
+                            "httpdb plugin lookup for=auth\n");
+        if(!add_param(settings->curl, &body, &body_len, "for", "auth")) {
+            ret = SASL_NOMEM;
+            goto done;
+        }
+    }
     verify_against_hashed_password = flags & SASL_AUXPROP_VERIFY_AGAINST_HASH;
 
     /* Assume that nothing is found */
@@ -378,10 +393,15 @@ static int httpdb_auxprop_lookup(void *glob_context,
 
     for(params_t *p = params; p; p = p->next){
         if(strstr(p->key, "param.") == p->key) {
-            sparams->utils->prop_set(sparams->propctx, &(p->key[6]), p->value, p->value_len);
+            const char *key = &(p->key[6]);
+            if (!(flags & SASL_AUXPROP_AUTHZID)) {
+                p->key[5] = '*';
+                key = &(p->key[5]);
+            }
+            sparams->utils->prop_set(sparams->propctx, key, p->value, p->value_len);
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                 "httpdb plugin lookup got param %s (found user)\n",
-                                &p->key[6]);
+                                key);
             sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
                                 "httpdb plugin lookup got param value: %s\n",
                                 p->value);
@@ -397,6 +417,28 @@ static int httpdb_auxprop_lookup(void *glob_context,
             sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
                                 "httpdb plugin lookup got discarded %s=%s\n",
                                 p->key, p->value);
+        }
+    }
+
+    {
+        char proplist[1024];
+        sparams->utils->prop_format(sparams->propctx, ", ", 2, proplist, 1024, 0);
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                            "httpdb plugin lookup proplist: %s\n",
+                            proplist);
+        const char *password_request[] = {"*userPassword", 0};
+        struct propval auxprop_values[2];
+        sparams->utils->prop_getnames(sparams->propctx, password_request, auxprop_values);
+        sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                            "httpdb plugin lookup proplist *userPassword.name=%s\n",
+                            auxprop_values[0].name);
+        if(auxprop_values[0].values) {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                                "httpdb plugin lookup proplist *userPassword.value=%s\n",
+                                auxprop_values[0].values[0]);
+        } else {
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_PASS,
+                                "httpdb plugin lookup proplist *userPassword.value=(not found)\n");
         }
     }
 
