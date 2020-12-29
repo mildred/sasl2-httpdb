@@ -287,27 +287,25 @@ static int httpdb_auxprop_lookup(void *glob_context,
     for (cur = to_fetch; cur->name; cur++) {
         char *realname = (char *) cur->name;
 
-        sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                            "httpdb plugin lookup param?=%s\n",
-                            realname);
-
         /* Only look up properties that apply to this lookup! */
         if (cur->name[0] == '*'
             && (flags & SASL_AUXPROP_AUTHZID)) {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                                "httpdb plugin lookup param skip name=*\n");
+                                "httpdb plugin lookup skip authentication param=%s\n",
+                                realname);
             continue;
         }
         if (!(flags & SASL_AUXPROP_AUTHZID)) {
             if(cur->name[0] != '*') {
                 sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                                    "httpdb plugin lookup param skip name!=*\n");
+                                    "httpdb plugin lookup skip authorization param=%s\n",
+                                    realname);
                 continue;
             } else {
-                realname = (char*)cur->name + 1;
                 sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                                    "httpdb plugin lookup param?=%s\n",
+                                    "httpdb plugin lookup transform authentication param=%s\n",
                                     realname);
+                realname = (char*)cur->name + 1;
             }
         }
 
@@ -319,10 +317,14 @@ static int httpdb_auxprop_lookup(void *glob_context,
             (verify_against_hashed_password == 0 ||
              strcasecmp(realname, SASL_AUX_PASSWORD_PROP) != 0)) {
             sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
-                                "httpdb plugin lookup param skip (no override)\n");
+                                "httpdb plugin lookup skip param to prevent override param=%s\n",
+                                realname);
             continue;
         } else if (cur->values) {
             sparams->utils->prop_erase(sparams->propctx, cur->name);
+            sparams->utils->log(sparams->utils->conn, SASL_LOG_TRACE,
+                                "httpdb plugin lookup erase %s\n",
+                                cur->name);
         }
 
         sparams->utils->log(sparams->utils->conn, SASL_LOG_DEBUG,
